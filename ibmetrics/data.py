@@ -65,5 +65,10 @@ def slice_time(builds: pandas.DataFrame, start: datetime, end: datetime) -> pand
     """
     Return a filtered view of the data that only includes builds made between the given start and end time.
     """
-    idxs = (builds["created_at"] >= start) & (builds["created_at"] <= end)
-    return builds.loc[idxs]
+    if start is not None:
+        if end is not None:
+            return builds.loc[(builds["created_at"] >= start) & (builds["created_at"] <= end)]
+        else:
+            return builds.loc[builds["created_at"] >= start]
+
+    return builds.loc[:]
