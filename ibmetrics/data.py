@@ -61,14 +61,15 @@ def filter_orgs(data: pandas.DataFrame, filter_ids: List[str]) -> pandas.DataFra
     return data
 
 
-def slice_time(builds: pandas.DataFrame, start: datetime, end: datetime) -> pandas.DataFrame:
+def slice_time(df: pandas.DataFrame, start: datetime, end: datetime, field: str="created_at") -> pandas.DataFrame:
     """
-    Return a filtered view of the data that only includes builds made between the given start and end time.
+    Return a filtered view of the data that only includes rows for which
+    'field' is between start and end dates.
     """
     if start is not None:
         if end is not None:
-            return builds.loc[(builds["created_at"] >= start) & (builds["created_at"] <= end)]
+            return df.loc[(df[field] >= start) & (df[field] <= end)]
         else:
-            return builds.loc[builds["created_at"] >= start]
+            return df.loc[df[field] >= start]
 
-    return builds.loc[:]
+    return df.loc[:]
