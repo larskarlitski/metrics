@@ -298,15 +298,13 @@ def monthly_active_time(subscriptions: pandas.DataFrame):
     matplotlib.rcParams["figure.dpi"] = 300
     matplotlib.rcParams["font.size"] = 8
 
-    now = datetime.now()
-    month_start = datetime(year=now.year, month=now.month, day=1)
-    # start at the month-start of the first record
-    start = subscriptions["created"].values.min().astype("datetime64[M]")  # truncate to month
-    end = np.datetime64(str(month_start)).astype("datetime64[M]")  # convert and truncate
+    # find bounding months for which we have data
+    start = subscriptions["created"].values.min().astype("datetime64[M]")
+    end = subscriptions["created"].values.max().astype("datetime64[M]")
 
     months = []
     durations = []
-    for mstart in np.arange(start, end):
+    for mstart in np.arange(start, end + 1):
         mstop = mstart + 1
 
         # clip created to month
