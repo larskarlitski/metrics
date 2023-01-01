@@ -1,0 +1,60 @@
+@font-face {
+  font-family: 'RedHatDisplay';
+  src: url("https://static.redhat.com/libs/redhat/redhat-font/4/webfonts/modified/RedHatDisplayVFModified.woff2") format('woff2-variations');
+  font-weight: 300 900;
+  font-style: normal;
+  font-display: fallback;
+}
+
+@font-face {
+  font-family: 'RedHatText';
+  src: url("https://static.redhat.com/libs/redhat/redhat-font/4/webfonts/modified/RedHatTextVFModified.woff2") format('woff2-variations');
+  font-weight: 300 700;
+  font-style: normal;
+  font-display: fallback;
+}
+
+body {
+  max-width: 50em;
+  margin: 0 auto;
+  font-family: RedHatText, sans-serif;
+  color: #444;
+  font-size: 16px;
+  line-height: 1.5em;
+}
+
+strong {
+  color: black;
+  font-weight: 600;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  margin-top: 1.5em;
+  font-family: RedHatDisplay, sans-serif;
+  font-weight: 300;
+  color: black;
+}
+
+figure {
+  text-align: center;
+}
+
+figure img {
+  max-width: 80%;
+  height: auto;
+}
+
+section.footnotes {
+  margin-top: 3em;
+}
+
+section.footnotes li p {
+  margin: 0em;
+}
+
+section.footnotes:before {
+  content: " ";
+  width: 8em;
+  display: block;
+  border-bottom: 0.5px solid #444;
+}
