@@ -332,7 +332,7 @@ def monthly_active_time(subscriptions: pandas.DataFrame):
     ax.set_title("Total runtime of RHEL instances\ncreated from Image Builder, in days", loc="left", fontweight="bold")
 
     bar_width = 0.66
-    plt.bar(months, np.array(durations)/3600/24, width=bar_width)
+    ax.bar(months, np.array(durations)/3600/24, width=bar_width)
     ax.set_xlim(-bar_width * 2/3, len(months) - 1 + bar_width * 2/3)
     caption = ("Runtime is calculated as the period between registration and last\n"
                "check-in. The data includes builds from customers through\n"
@@ -340,6 +340,8 @@ def monthly_active_time(subscriptions: pandas.DataFrame):
                "on-prem builds are excluded.\n\n"
                "Source: Red Hat Subscription Manager data")
     fig.text(0.12, -0.11, caption, fontsize="small", color="#777777", wrap=True)
+
+    return fig
 
 
 def active_time_distribution(subscriptions: pandas.DataFrame):
@@ -363,3 +365,117 @@ def active_time_distribution(subscriptions: pandas.DataFrame):
     ax.yaxis.set_tick_params(size=0)
     ax.set_axisbelow(True)
     ax.set_title("Distribution of runtime of RHEL instances\ncreated from Image Builder, in days", loc="left", fontweight="bold")
+
+
+def monthly_orgs(builds: pandas.DataFrame):
+    matplotlib.rcParams["figure.dpi"] = 300
+    matplotlib.rcParams["font.size"] = 8
+
+    fig, ax = plt.subplots(figsize=(6, 5))
+
+    ax.set_title("Organizations building at least one image", loc="left", fontweight="bold")
+    ax.grid(axis="y", color="#dddddd")
+    ax.xaxis.set_tick_params(size=0, pad=6)
+    ax.yaxis.set_tick_params(size=0)
+    ax.set_axisbelow(True)
+
+    user_counts, months = metrics.monthly_users(builds)
+    new_user_counts, months = metrics.monthly_new_users(builds)
+    old_user_counts = user_counts - new_user_counts
+
+    def format_label(n):
+        return str(n) if n >= 10 else ''
+
+    bar_width = 0.66
+    names = [m.month_name() for m in months]
+    bar_new = ax.bar(names, new_user_counts, width=bar_width, bottom=old_user_counts)
+    bar_old = ax.bar(names, old_user_counts, width=bar_width, label="Recurring")
+
+    # this won't work for bars that are too small. use annotate()
+    ax.bar_label(bar_new, map(format_label, new_user_counts), label_type="center", color="#ffffff")
+    ax.bar_label(bar_old, map(format_label, old_user_counts), label_type="center", color="#ffffff")
+    ax.legend()
+
+    ax.set_xlim(-bar_width * 2/3, len(names) - 1 + bar_width * 2/3)
+
+    caption = ("An organization is an account for a single customer, not an individual user.\n"
+               "Organizations are counted as Recurring if they have built an image\n"
+               "in any preceding month. Internal Red Hat organizations are excluded.\n\n"
+               "Source: Image Builder Production Database")
+    fig.text(0.13, -0.05, caption, fontsize="small", color="#777777")
+
+    return fig
+
+
+def builds_per_footprint(builds):
+    matplotlib.rcParams["figure.dpi"] = 300
+    matplotlib.rcParams["font.size"] = 8
+
+    # distribution of single-footprint users (stacked cloud)
+    # it's a little hacky, but that's okay for this notebook
+    fig, ax = plt.subplots(figsize=(4, 4))
+
+    ax.grid(axis="y", color="#dddddd")
+    ax.spines["left"].set_visible(False)
+    ax.spines["bottom"].set(linewidth=1.1)
+    ax.xaxis.set_tick_params(size=0, pad=6)
+    ax.yaxis.set_tick_params(size=0)
+    ax.set_axisbelow(True)
+    ax.set_title("Number of images built for each footprint\nsince May", loc="left", fontweight="bold")
+
+    bar_width = 0.66
+
+    sfp_users = metrics.single_footprint_users(builds)
+    fp_counts = sfp_users["footprint"].value_counts()
+
+    footprints = metrics.footprints(builds)
+    fp_counts = footprints["footprint"].value_counts()
+
+    bottom = 0
+    clouds = ["gcp", "azure", "aws"]
+    cloud_sum = sum(v if k in clouds else 0 for k, v in fp_counts.items())
+
+    cloud_grouped_feet = fp_counts.copy()
+    cloud_grouped_feet["cloud"] = cloud_sum
+    for cloud in clouds:
+        del cloud_grouped_feet[cloud]
+
+    names = {
+        "private-cloud": "Private Cloud",
+        "cloud": "Public Cloud",
+        "bare-metal": "Bare Metal",
+        "edge": "Edge"
+    }
+
+    cloud_grouped_feet.sort_values(ascending=False, inplace=True)
+    ax.bar([names[i] for i in cloud_grouped_feet.index], cloud_grouped_feet.values, width=bar_width)  # plot with grouped cloud to get them in order (sorted)
+
+    public_clouds = {
+        "aws": "AWS",
+        "azure": "Azure",
+        "gcp": "GCP"
+    }
+
+    colors = {
+        "aws": "#E79824",
+        "azure": "#345BDB",
+        "gcp": "#599C5D"
+    }
+    # draw over cloud bar with breakdown values of individual clouds
+    # Note: the legend order is top-to-bottom in order of creation, so let's draw the clouds in the same order
+    bottom = sum(fp_counts[cld] for cld in clouds)  # top of the bar
+    for cld in clouds:
+        bottom -= fp_counts[cld]
+        bar = ax.bar(names["cloud"], fp_counts[cld], bottom=bottom, label=public_clouds.get(cld, cld), width=bar_width, color=colors[cld])
+
+    ax.set_xlim(-bar_width * 2/3, len(clouds) + bar_width * 2/3)
+
+    ax.legend()
+    caption = ("Private cloud includes the Guest Image (qcow) and VMWare images.\n"
+               "Bare metal refers to the installer (ISO).\n"
+               "Edge refers to all edge image types: commit, container, installer (ISO).\n"
+               "Builds from internal Red Hat organizations are excluded.\n\n"
+               "Source: Image Builder Production Database")
+    fig.text(0.13, -0.11, caption, fontsize="small", color="#777777")
+
+    return fig
