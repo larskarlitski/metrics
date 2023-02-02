@@ -241,13 +241,12 @@ def footprints(builds: pandas.DataFrame, split_cloud=True) -> pandas.DataFrame:
     - aws: ami and aws
     - azure: azure and vhd
 
-    If split_cloud is False, gcp, aws, and azure are replaced by a single value 'cloud'.
+    If split_cloud is False, gcp, aws, and azure are replaced by a single value 'cloud' and vsphere and guest-image are
+    replaced by 'private-cloud'.
     """
     type_footprint = {
         "rhel-edge-commit": "edge",
         "rhel-edge-installer": "edge",
-        "vsphere": "private-cloud",
-        "guest-image": "private-cloud",
         "image-installer": "bare-metal",
     }
 
@@ -258,6 +257,8 @@ def footprints(builds: pandas.DataFrame, split_cloud=True) -> pandas.DataFrame:
                 "azure": "azure",
                 "gcp": "gcp",
                 "vhd": "azure",
+                "vsphere": "vsphere",
+                "guest-image": "guest-image",
             }
         )
     else:
@@ -268,6 +269,8 @@ def footprints(builds: pandas.DataFrame, split_cloud=True) -> pandas.DataFrame:
                 "azure": "cloud",
                 "gcp": "cloud",
                 "vhd": "cloud",
+                "vsphere": "private-cloud",
+                "guest-image": "private-cloud",
             }
         )
 
