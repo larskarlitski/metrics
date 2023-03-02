@@ -522,3 +522,36 @@ def active_time_distribution(subscriptions: pandas.DataFrame):
     ax.set_axisbelow(True)
     ax.set_title("Distribution of runtime of RHEL instances\ncreated from Image Builder, in days",
                  loc="left", fontweight="bold")
+
+
+def _ci_costs_box(costs: pandas.DataFrame):
+    rcc = costs.reset_index()
+    rcc = rcc.set_index(["Branch"])
+    grouped = rcc.groupby("Project")
+    grouped.plot.bar(y="Cost", legend=True)
+    rcc.boxplot(by='Project', column=["Cost", "Rogue_Cost"], rot=90)
+
+
+def _ci_costs_bar(costs: pandas.DataFrame):
+    rcc = costs.reset_index()
+    matplotlib.rcParams["font.size"] = 7
+    rcc = rcc.set_index(["Branch"])
+    grouped = rcc.groupby("Project")
+    plt.figure(constrained_layout=True)
+    for i, (project, pdf) in enumerate(grouped):
+        ax = plt.subplot(3, 2, i + 1)
+        pdf.plot.bar(y="Cost")
+        ax.set_title(project)
+    matplotlib.rcParams["font.size"] = 8
+
+
+def ci_costs(costs: pandas.DataFrame, style="bar"):
+    """
+    Plot the ci costs. Time window depends on the data in the panda DataFrame.
+    The style can be either a "bar" plot or a "box" plot.
+    Defaults to a "bar" plot.
+    """
+    if style == "box":
+        _weekly_costs_box(costs)
+    else:
+        _weekly_costs_bar(costs)

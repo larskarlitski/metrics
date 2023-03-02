@@ -149,3 +149,8 @@ def read_subscriptions(path: Union[os.PathLike, str]) -> pandas.DataFrame:
     # rewrite the index column
     subscriptions.reset_index(drop=True, inplace=True)
     return subscriptions
+
+
+def read_ci_costs(parquet_file: Union[os.PathLike, str]) -> pandas.DataFrame:
+    # Gather the data
+    return pandas.read_parquet(parquet_file)
