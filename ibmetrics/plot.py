@@ -58,30 +58,61 @@ def monthly_users(builds: pandas.DataFrame, ax: Optional[plt.Axes] = None):
     ax.set_title("Monthly users")
 
 
-def monthly_users_stacked(builds: pandas.DataFrame, ax: Optional[plt.Axes] = None):
+def monthly_users_stacked(builds: pandas.DataFrame, fig: Optional[plt.Figure] = None):
     """
     Bar graph of the number of users that appear in each calendar month; new users stacked on old.
     """
+    matplotlib.rcParams["figure.dpi"] = 300
+    matplotlib.rcParams["font.size"] = 10
+    plt.style.use("./notebooks/redhat.mplstyle")
 
-    if not ax:
-        ax = plt.axes()
+    if not fig:
+        fig = plt.figure()
+
+    ax = fig.add_axes([0, 0, 1, 1])
+
+    # fig.suptitle("Organizations building at least one image", x=0)
+
+    ax.grid(axis="y", color="#dddddd")
+    # ax.spines["bottom"].set(linewidth=1.1)
+    ax.xaxis.set_tick_params(size=0, pad=6)
+    ax.yaxis.set_tick_params(size=0)
+    # ax.yaxis.tick_right()
+
+    # ticks = ax.get_yticklabels()
+    # for tick in ticks:
+    #    tick.set_verticalalignment("bottom")
+    #   tick.set_horizontalalignment("right")
+
+    ax.set_axisbelow(True)
+    ax.set_title("Organizations building at least one image", loc="left", fontweight="bold")
 
     user_counts, months = metrics.monthly_users(builds)
     new_user_counts, months = metrics.monthly_new_users(builds)
     old_user_counts = user_counts - new_user_counts
-    ax.bar(months, new_user_counts, width=27, bottom=old_user_counts)
-    ax.bar(months, old_user_counts, width=27, label="Recurring")
 
-    font_size = matplotlib.rcParams["font.size"]
-    for mo, count in zip(months, user_counts):
-        ax.text(mo, count-font_size/2, str(count), size=font_size*1.2, ha="center", va="top", color="white")
+    bar_width = 0.66
 
-    xlabels = [f"{mo.month_name()}" for mo in months]
-    ax.set_xticks(months, xlabels)
-    ax.set_title("Organizations building at least one image")
-    plt.figtext(0.1, -0.2, "Source: Image Builder Production Database",
-                wrap=False, horizontalalignment='left', color="#9a9a9a")
+    def format_label(n):
+        return str(n) if n >= 10 else ''
+
+    names = [m.month_name() for m in months]
+# bar = ax.bar(names, counts, width=0.66)
+    bar_new = ax.bar(names, new_user_counts, width=bar_width, bottom=old_user_counts)
+    bar_old = ax.bar(names, old_user_counts, width=bar_width, label="Recurring")
+
+# this won't work for bars that are too small. use annotate()
+    ax.bar_label(bar_new, map(format_label, new_user_counts), label_type="center", color="#ffffff")
+    ax.bar_label(bar_old, map(format_label, old_user_counts), label_type="center", color="#ffffff")
     ax.legend()
+
+    ax.set_xlim(-bar_width * 2/3, len(names) - 1 + bar_width * 2/3)
+
+    caption = ("An organization is an account for a single customer, not an individual user.\n"
+               "Organizations are counted as Recurring if they have built an image\n"
+               "in any preceding month. Internal Red Hat organizations are excluded.\n\n"
+               "Source: Image Builder Production Database")
+    fig.text(0, -0.15, caption, color="#777777", wrap=True)
 
 
 def monthly_builds(builds: pandas.DataFrame, ax: Optional[plt.Axes] = None):
@@ -151,6 +182,106 @@ def footprint_builds(builds: pandas.DataFrame, ax: Optional[plt.Axes] = None):
     feet = builds_footprints["footprint"].value_counts()
     labels = [f"{idx} ({val})" for idx, val in feet.items()]
     ax.pie(feet.values, labels=labels)
+
+
+def footprints_stacked(builds: pandas.DataFrame, fig: Optional[plt.Figure] = None):
+    matplotlib.rcParams["figure.dpi"] = 300
+    matplotlib.rcParams["font.size"] = 8
+    plt.style.use("./notebooks/redhat.mplstyle")
+
+    if not fig:
+        fig = plt.figure()
+
+    ax = fig.add_axes([0, 0, 1, 1])
+
+    ax.grid(axis="y", color="#dddddd")
+    ax.spines["left"].set_visible(False)
+    ax.spines["bottom"].set(linewidth=1.1)
+    ax.xaxis.set_tick_params(size=0, pad=6)
+    ax.yaxis.set_tick_params(size=0)
+    ax.set_axisbelow(True)
+    ax.set_title("Number of images built for each footprint", loc="left", fontweight="bold")
+
+    bar_width = 0.66
+
+    sfp_users = metrics.single_footprint_users(builds)
+    fp_counts = sfp_users["footprint"].value_counts()
+    # ax.bar(fp_counts.index, fp_counts.values)
+
+    footprints = metrics.footprints(builds)
+    fp_counts = footprints["footprint"].value_counts()
+
+    bottom = 0
+    priv_clouds = ["guest-image", "vsphere"]
+    priv_sum = sum(v if k in priv_clouds else 0 for k, v in fp_counts.items())
+
+    grouped = fp_counts.copy()
+    grouped["private-cloud"] = priv_sum
+    for priv in priv_clouds:
+        del grouped[priv]
+
+    bottom = 0
+    clouds = ["gcp", "azure", "aws"]
+    cloud_sum = sum(v if k in clouds else 0 for k, v in fp_counts.items())
+
+    grouped["cloud"] = cloud_sum
+    for cloud in clouds:
+        del grouped[cloud]
+
+    names = {
+        "private-cloud": "Private Cloud",
+        "cloud": "Public Cloud",
+        "bare-metal": "Bare Metal",
+        "edge": "Edge"
+    }
+
+    grouped.sort_values(ascending=False, inplace=True)
+    # plot with grouped cloud to get them in order (sorted)
+    ax.bar([names[i] for i in grouped.index], grouped.values, width=bar_width)
+    # for ft in cloud_grouped_feet.items():
+    #    if ft[0] == "cloud":
+    #        continue
+
+    labels = {
+        "aws": "AWS",
+        "azure": "Azure",
+        "gcp": "GCP",
+        "guest-image": "Guest Image",
+        "vsphere": "vSphere",
+    }
+
+    colors = {
+        "aws": "#E79824",
+        "azure": "#345BDB",
+        "gcp": "#599C5D",
+        "guest-image": "#8f0000",
+        "vsphere": "#7598bd",
+    }
+
+    # draw over cloud bars with breakdown values of individual image types
+    # Note: the legend order is top-to-bottom in order of creation, so let's draw the clouds in the same order
+    bottom = sum(fp_counts[p] for p in priv_clouds)  # top of the bar
+    for priv in priv_clouds:
+        bottom -= fp_counts[priv]
+        ax.bar(names["private-cloud"], fp_counts[priv], bottom=bottom, label=labels.get(priv, priv),
+               width=bar_width, color=colors[priv])
+        # ax.bar_label(bar, fp_counts, label_type="center", color="#ffffff")
+
+    bottom = sum(fp_counts[cld] for cld in clouds)  # top of the bar
+    for cld in clouds:
+        bottom -= fp_counts[cld]
+        ax.bar(names["cloud"], fp_counts[cld], bottom=bottom, label=labels.get(cld, cld), width=bar_width,
+               color=colors[cld])
+        # ax.bar_label(bar, fp_counts, label_type="center", color="#ffffff")
+
+    ax.set_xlim(-bar_width * 2/3, len(clouds) + bar_width * 2/3)
+
+    ax.legend()
+    caption = ("Bare metal refers to the installer (ISO).\n"
+               "Edge refers to all edge image types: commit, container, installer (ISO).\n"
+               "Builds from internal Red Hat organizations are excluded.\n\n"
+               "Source: Image Builder Production Database")
+    fig.text(0.03, -0.2, caption, fontsize="small", color="#777777")
 
 
 def weekly_users(builds: pandas.DataFrame, ax: Optional[plt.Axes] = None):
@@ -294,11 +425,18 @@ def footprint_monthly_builds(builds: pandas.DataFrame, ax: Optional[plt.Axes] = 
     ax.legend()
 
 
-def monthly_active_time(subscriptions: pandas.DataFrame):
+def monthly_active_time(subscriptions: pandas.DataFrame, fig: Optional[plt.Figure] = None):
+    matplotlib.rcParams["figure.dpi"] = 300
+    matplotlib.rcParams["font.size"] = 18
+    plt.style.use("./notebooks/redhat.mplstyle")
+
+    if not fig:
+        fig = plt.figure()
+
+    ax = fig.add_axes([0, 0, 1, 1])
+
     # filter out rows without checkins
     subscriptions = subscriptions.loc[subscriptions["lastcheckin"] != "None"]
-    matplotlib.rcParams["figure.dpi"] = 300
-    matplotlib.rcParams["font.size"] = 8
 
     now = datetime.now()
     month_start = datetime(year=now.year, month=now.month, day=1)
@@ -326,14 +464,14 @@ def monthly_active_time(subscriptions: pandas.DataFrame):
         months.append(monthname)
         durations.append(duration.total_seconds())
 
-    fig, ax = plt.subplots(figsize=(4, 4))
     ax.grid(axis="y", color="#dddddd")
     ax.spines["left"].set_visible(False)
     ax.spines["bottom"].set(linewidth=1.1)
     ax.xaxis.set_tick_params(size=0, pad=6)
     ax.yaxis.set_tick_params(size=0)
     ax.set_axisbelow(True)
-    ax.set_title("Total runtime of RHEL instances\ncreated from Image Builder, in days", loc="left", fontweight="bold")
+    ax.set_title("Total runtime of RHEL instances\ncreated from Image Builder, in days",
+                 loc="left", fontweight="bold")
 
     bar_width = 0.66
     plt.bar(months, np.array(durations)/3600/24, width=bar_width)
@@ -343,7 +481,7 @@ def monthly_active_time(subscriptions: pandas.DataFrame):
                "console.redhat.com. Internal usage and registrations from\n"
                "on-prem builds are excluded.\n\n"
                "Source: Red Hat Subscription Manager data")
-    fig.text(0.12, -0.11, caption, fontsize="small", color="#777777", wrap=True)
+    fig.text(0, -0.30, caption, color="#777777", wrap=True)
 
 
 def active_time_distribution(subscriptions: pandas.DataFrame):
@@ -367,4 +505,5 @@ def active_time_distribution(subscriptions: pandas.DataFrame):
     ax.xaxis.set_tick_params(size=0, pad=6)
     ax.yaxis.set_tick_params(size=0)
     ax.set_axisbelow(True)
-    ax.set_title("Distribution of runtime of RHEL instances\ncreated from Image Builder, in days", loc="left", fontweight="bold")
+    ax.set_title("Distribution of runtime of RHEL instances\ncreated from Image Builder, in days",
+                 loc="left", fontweight="bold")
