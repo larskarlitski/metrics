@@ -104,7 +104,7 @@ def monthly_users_stacked(builds: pandas.DataFrame, fig: Optional[plt.Figure] = 
 # this won't work for bars that are too small. use annotate()
     ax.bar_label(bar_new, map(format_label, new_user_counts), label_type="center", color="#ffffff")
     ax.bar_label(bar_old, map(format_label, old_user_counts), label_type="center", color="#ffffff")
-    ax.legend()
+    ax.legend(loc="upper left")
 
     ax.set_xlim(-bar_width * 2/3, len(names) - 1 + bar_width * 2/3)
 
@@ -205,10 +205,6 @@ def footprints_stacked(builds: pandas.DataFrame, fig: Optional[plt.Figure] = Non
     ax.set_title(title, loc="left", fontweight="bold")
 
     bar_width = 0.66
-
-    sfp_users = metrics.single_footprint_users(builds)
-    fp_counts = sfp_users["footprint"].value_counts()
-    # ax.bar(fp_counts.index, fp_counts.values)
 
     footprints = metrics.footprints(builds)
     fp_counts = footprints["footprint"].value_counts()
