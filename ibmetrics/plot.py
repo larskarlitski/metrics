@@ -184,7 +184,7 @@ def footprint_builds(builds: pandas.DataFrame, ax: Optional[plt.Axes] = None):
     ax.pie(feet.values, labels=labels)
 
 
-def footprints_stacked(builds: pandas.DataFrame, fig: Optional[plt.Figure] = None):
+def footprints_stacked(builds: pandas.DataFrame, fig: Optional[plt.Figure] = None, title: Optional[str] = None):
     matplotlib.rcParams["figure.dpi"] = 300
     matplotlib.rcParams["font.size"] = 8
     plt.style.use("./notebooks/redhat.mplstyle")
@@ -200,7 +200,9 @@ def footprints_stacked(builds: pandas.DataFrame, fig: Optional[plt.Figure] = Non
     ax.xaxis.set_tick_params(size=0, pad=6)
     ax.yaxis.set_tick_params(size=0)
     ax.set_axisbelow(True)
-    ax.set_title("Number of images built for each footprint", loc="left", fontweight="bold")
+    if not title:
+        title = "Number of images built for each footprint"
+    ax.set_title(title, loc="left", fontweight="bold")
 
     bar_width = 0.66
 
