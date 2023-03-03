@@ -438,29 +438,41 @@ def monthly_active_time(subscriptions: pandas.DataFrame, fig: Optional[plt.Figur
 
     now = datetime.now()
     month_start = datetime(year=now.year, month=now.month, day=1)
+
     # start at the month-start of the first record
     start = subscriptions["created"].values.min().astype("datetime64[M]")  # truncate to month
     end = np.datetime64(str(month_start)).astype("datetime64[M]")  # convert and truncate
 
     months = []
-    durations = []
+    cloud_durations = []
+    weldr_durations = []
+
+    # separate values
+    cloud_subs = subscriptions.loc[subscriptions["element"] == "cloudapi-v2"]
+    weldr_subs = subscriptions.loc[subscriptions["element"] == "weldr"]
     for mstart in np.arange(start, end):
         mstop = mstart + 1
 
         # clip created to month
-        created = subscriptions["created"].astype("datetime64[s]")
-        created = created.clip(mstart, mstop)
+        cloud_created = cloud_subs["created"].astype("datetime64[s]")
+        cloud_created = cloud_created.clip(mstart, mstop)
+        weldr_created = weldr_subs["created"].astype("datetime64[s]")
+        weldr_created = weldr_created.clip(mstart, mstop)
 
         # clip lastcheckin to month
-        lastcheckin = subscriptions["lastcheckin"].astype("datetime64[s]")
-        lastcheckin = lastcheckin.clip(mstart, mstop)
+        cloud_lastcheckin = cloud_subs["lastcheckin"].astype("datetime64[s]")
+        cloud_lastcheckin = cloud_lastcheckin.clip(mstart, mstop)
+        weldr_lastcheckin = weldr_subs["lastcheckin"].astype("datetime64[s]")
+        weldr_lastcheckin = weldr_lastcheckin.clip(mstart, mstop)
 
-        duration = (lastcheckin - created).sum()
-        if duration.total_seconds() == 0:
-            continue
+        cloud_duration = (cloud_lastcheckin - cloud_created).sum()
+        weldr_duration = (weldr_lastcheckin - weldr_created).sum()
+
         monthname = datetime.strptime(f"{mstart}", "%Y-%m").strftime("%B")
         months.append(monthname)
-        durations.append(duration.total_seconds())
+
+        cloud_durations.append(cloud_duration.total_seconds())
+        weldr_durations.append(weldr_duration.total_seconds())
 
     ax.grid(axis="y", color="#dddddd")
     ax.spines["left"].set_visible(False)
@@ -472,12 +484,14 @@ def monthly_active_time(subscriptions: pandas.DataFrame, fig: Optional[plt.Figur
                  loc="left", fontweight="bold")
 
     bar_width = 0.66
-    plt.bar(months, np.array(durations)/3600/24, width=bar_width)
+    plt.bar(months, (np.array(weldr_durations) + np.array(cloud_durations))/3600/24, width=bar_width, label="Service")
+    plt.bar(months, np.array(weldr_durations)/3600/24, width=bar_width, label="On-premises")
+    ax.legend(loc="upper left")
     ax.set_xlim(-bar_width * 2/3, len(months) - 1 + bar_width * 2/3)
     caption = ("Runtime is calculated as the period between registration and last\n"
                "check-in. The data includes builds from customers through\n"
-               "console.redhat.com. Internal usage and registrations from\n"
-               "on-prem builds are excluded.\n\n"
+               "console.redhat.com (Service) and on-premises builds (On-premises).\n"
+               "Internal usage is excluded.\n\n"
                "Source: Red Hat Subscription Manager data")
     fig.text(0, -0.30, caption, color="#777777", wrap=True)
 
