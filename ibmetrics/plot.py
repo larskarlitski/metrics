@@ -425,13 +425,17 @@ def footprint_monthly_builds(builds: pandas.DataFrame, ax: Optional[plt.Axes] = 
 
 def monthly_active_time(subscriptions: pandas.DataFrame, fig: Optional[plt.Figure] = None):
     matplotlib.rcParams["figure.dpi"] = 300
-    matplotlib.rcParams["font.size"] = 18
+    matplotlib.rcParams["font.size"] = 16
     plt.style.use("./notebooks/redhat.mplstyle")
 
     if not fig:
         fig = plt.figure()
 
     ax = fig.add_axes([0, 0, 1, 1])
+
+    ax.grid(axis="y", color="#dddddd")
+    ax.xaxis.set_tick_params(size=0, pad=6)
+    ax.yaxis.set_tick_params(size=0)
 
     # filter out rows without checkins
     subscriptions = subscriptions.loc[subscriptions["lastcheckin"] != "None"]
@@ -475,8 +479,8 @@ def monthly_active_time(subscriptions: pandas.DataFrame, fig: Optional[plt.Figur
         weldr_durations.append(weldr_duration.total_seconds())
 
     ax.grid(axis="y", color="#dddddd")
-    ax.spines["left"].set_visible(False)
-    ax.spines["bottom"].set(linewidth=1.1)
+    # ax.spines["left"].set_visible(False)
+    # ax.spines["bottom"].set(linewidth=1.1)
     ax.xaxis.set_tick_params(size=0, pad=6)
     ax.yaxis.set_tick_params(size=0)
     ax.set_axisbelow(True)
