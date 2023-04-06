@@ -108,3 +108,45 @@ def read(path: Union[os.PathLike, str]) -> pandas.DataFrame:
     Alias for read_parquet()
     """
     return read_parquet(path)
+
+
+def read_subscriptions(path: Union[os.PathLike, str]) -> pandas.DataFrame:
+    """
+    Read subscription data .tsv files from a directory. Data files are concatenated and records are deduplicated based
+    on UUID.
+    """
+    filelist = glob.glob(os.path.join(path, "*.tsv"))
+
+    if not filelist:
+        print(f"WARNING: no .tsv files found in {path}")
+        return pandas.DataFrame()
+
+    dataframes = []
+    for fname in filelist:
+        dataframes.append(pandas.read_csv(fname, delimiter="\t", dtype={"org_id": str}))
+
+    subscriptions = pandas.concat(dataframes, ignore_index=True)
+    subscriptions["created"] = _date_reader(subscriptions["created"])
+    subscriptions["lastcheckin"] = _date_reader(subscriptions["lastcheckin"])
+
+    # remove identical records first
+    subscriptions.drop_duplicates(inplace=True)
+
+    # deduplicate records based on UUID that are different in other columns; keep most recent lastcheckin
+    uuids = subscriptions["uuid"].value_counts()
+    for uuid, count in uuids.items():
+        if count == 1:
+            continue
+
+        dupe_indexes = subscriptions["uuid"] == uuid
+        checkins = subscriptions.loc[dupe_indexes]["lastcheckin"]
+        # index of the most recent date
+        last_index = checkins.index[checkins.argmax()]
+        # drop the most recent from the dupes
+        to_drop = checkins.drop(index=last_index).index
+        # drop the remaining by index
+        subscriptions.drop(index=to_drop, inplace=True)
+
+    # rewrite the index column
+    subscriptions.reset_index(drop=True, inplace=True)
+    return subscriptions
