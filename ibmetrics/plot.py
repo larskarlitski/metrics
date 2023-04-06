@@ -505,15 +505,14 @@ def active_time_distribution(subscriptions: pandas.DataFrame):
     matplotlib.rcParams["figure.dpi"] = 300
     matplotlib.rcParams["font.size"] = 8
 
-    created = subscriptions["created"].astype("datetime64[s]")
-    lastcheckin = subscriptions["lastcheckin"].astype("datetime64[s]")
+    created = subscriptions["created"]
+    lastcheckin = subscriptions["lastcheckin"]
     durations = lastcheckin - created
-    dseconds = durations.map(pandas.Timedelta.total_seconds)
+    secs = np.array([d.total_seconds() for d in durations])
+    days = secs/3600/24
 
     _, ax = plt.subplots(figsize=(4, 4))
-    # bar_width = 0.66
-    max_days = 90
-    plt.hist(dseconds/3600/24, bins=range(max_days))
+    plt.hist(days)
 
     ax.grid(axis="y", color="#dddddd")
     ax.spines["left"].set_visible(False)
