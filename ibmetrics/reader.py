@@ -6,7 +6,6 @@ import json
 import os
 import re
 import sys
-
 from typing import Dict, List, Union
 
 import numpy as np
