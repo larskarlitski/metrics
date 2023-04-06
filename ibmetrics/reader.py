@@ -18,6 +18,13 @@ def _list_reader(col):
 
 
 def _date_reader(col):
+    """
+    The standard date parser in pandas.read_csv() will give up on any string that fails to parse as a date and keep the
+    column as a string. This function handles the "None" values in the data to return a proper None so we can have a
+    datetime dtype for the column.
+    """
+    col = col.values
+    col[col == "None"] = None  # change values "None" to None
     return np.array(col, dtype=np.datetime64)
 
 
